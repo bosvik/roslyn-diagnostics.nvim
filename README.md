@@ -9,11 +9,13 @@ On demand generation of workspace diagnostics for your .NET project.
 {
   "bosvik/roslyn-diagnostics.nvim",
   opts = {},
+  ft = { "cs" },
   keys = {
     {
       "<leader>cD",
       "<cmd>RequestDiagnostics<cr>",
       desc = "Request diagnostics",
+      ft = { "cs" },
     },
   }
 }

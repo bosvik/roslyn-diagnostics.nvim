@@ -97,19 +97,33 @@ local function diagnostic_lsp_to_vim(diagnostics, bufnr, client_id)
     }
   end, diagnostics)
 end
+
+local function close_unlisted_buffers()
+  for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+    if not vim.bo[buf].buflisted then vim.api.nvim_buf_delete(buf, { force = true }) end
+  end
+end
+
 local M = {}
+
 M.setup = function()
   vim.api.nvim_create_user_command("RequestDiagnostics", function() M.request_diagnostics() end, {})
 end
 
 M.request_diagnostics = function()
+  -- close_unlisted_buffers()
+  local spinner = require("roslyn-diagnostics.spinner").new()
   local clients = vim.lsp.get_clients({ name = "roslyn" })
-  if not clients or #clients == 0 then return end
+  if not clients or #clients == 0 then
+    vim.notify("Roslyn has not attached to the buffer yet. Try again.")
+    return
+  end
   local client = clients[1]
   if client.name == "roslyn" then
+    spinner:start_spinner("Populating workspace diagnostics")
     client.request("workspace/diagnostic", { previousResultIds = {} }, function(err, result, context, config)
+      spinner:stop_spinner("Finished populating diagnostics")
       local ns = vim.lsp.diagnostic.get_namespace(client.id)
-      vim.notify("Finished populating diagnostics")
 
       local function find_buf_or_make_unlisted(file_name)
         for _, buf in ipairs(vim.api.nvim_list_bufs()) do
@@ -133,4 +147,5 @@ M.request_diagnostics = function()
     end)
   end
 end
+
 return M
