@@ -23,6 +23,22 @@ local function severity_lsp_to_vim(severity)
   return severity
 end
 
+---@param uri unknown
+---@param buf_lines string[]?
+---@return lsp.DidOpenTextDocumentParams?
+local function create_textdocument(uri, buf_lines)
+  if not buf_lines then return end
+  local params = {
+    textDocument = {
+      uri = uri,
+      version = 0,
+      text = vim.fn.join(buf_lines, "\n"),
+      languageId = "csharp",
+    },
+  }
+  return params
+end
+
 --- @param diagnostic lsp.Diagnostic
 --- @param client_id integer
 --- @return table?
@@ -66,9 +82,11 @@ end
 ---@param bufnr integer
 ---@param client_id integer
 ---@return vim.Diagnostic[]
-local function diagnostic_lsp_to_vim(diagnostics, bufnr, client_id)
+local function diagnostic_lsp_to_vim(diagnostics, uri, bufnr, client_id)
   local buf_lines = get_buf_lines(bufnr)
   local client = vim.lsp.get_client_by_id(client_id)
+  local params = create_textdocument(uri, buf_lines)
+  if params and client then client.notify("textDocument/didOpen", params) end
   local offset_encoding = client and client.offset_encoding or "utf-16"
   --- @param diagnostic lsp.Diagnostic
   --- @return vim.Diagnostic
@@ -77,7 +95,7 @@ local function diagnostic_lsp_to_vim(diagnostics, bufnr, client_id)
     local _end = diagnostic.range["end"]
     local message = diagnostic.message
     if type(message) ~= "string" then
-      vim.notify_once(string.format("Unsupported Markup message from LSP client %d", client_id), vim.lsp.log_levels.ERROR)
+      vim.notify_once(string.format("Unsupported Markup message from LSP client %d", client_id), 4)
       message = diagnostic.message.value
     end
     --- @type vim.Diagnostic
@@ -103,7 +121,6 @@ local function close_unlisted_buffers()
     if not vim.bo[buf].buflisted then vim.api.nvim_buf_delete(buf, { force = true }) end
   end
 end
-
 local M = {}
 
 M.setup = function()
@@ -111,7 +128,7 @@ M.setup = function()
 end
 
 M.request_diagnostics = function()
-  -- close_unlisted_buffers()
+  close_unlisted_buffers()
   local spinner = require("roslyn-diagnostics.spinner").new()
   local clients = vim.lsp.get_clients({ name = "roslyn" })
   if not clients or #clients == 0 then
@@ -122,7 +139,6 @@ M.request_diagnostics = function()
   if client.name == "roslyn" then
     spinner:start_spinner("Populating workspace diagnostics")
     client.request("workspace/diagnostic", { previousResultIds = {} }, function(err, result, context, config)
-      spinner:stop_spinner("Finished populating diagnostics")
       local ns = vim.lsp.diagnostic.get_namespace(client.id)
 
       local function find_buf_or_make_unlisted(file_name)
@@ -134,16 +150,17 @@ M.request_diagnostics = function()
         vim.api.nvim_buf_set_name(buf, file_name)
         return buf
       end
-
       for _, per_file_diags in ipairs(result.items) do
         local filename = string.gsub(per_file_diags.uri, "file://", "")
         if string.find(filename, "%.cs$") and not string.find(filename, "/obj/") and not string.find(filename, "/bin/") then
           if per_file_diags.items ~= nil and #per_file_diags.items > 0 then
             local buf = find_buf_or_make_unlisted(filename)
-            vim.diagnostic.set(ns, buf, diagnostic_lsp_to_vim(per_file_diags.items, buf, context.client_id))
+            local diagnostics = diagnostic_lsp_to_vim(per_file_diags.items, per_file_diags.uri, buf, context.client_id)
+            vim.diagnostic.set(ns, buf, diagnostics)
           end
         end
       end
+      spinner:stop_spinner("Finished populating diagnostics")
     end)
   end
 end
