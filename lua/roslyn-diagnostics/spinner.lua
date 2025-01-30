@@ -68,10 +68,17 @@ function M:stop_spinner(finishText, level)
     self.spinner_timer:stop()
     self.spinner_timer:close()
     self.spinner_timer = nil
-    vim.notify(finishText, level, {
-      title = "Progress",
-      replace = self.notify_id,
-    })
+    if has_snacks then
+      vim.notify(finishText, level, {
+        title = "Progress",
+        id = "progress",
+      })
+    else
+      vim.notify(finishText, level, {
+        title = "Progress",
+        replace = self.notify_id,
+      })
+    end
     self.notify_id = nil
   end
 end
