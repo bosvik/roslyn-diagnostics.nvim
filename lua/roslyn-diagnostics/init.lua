@@ -61,7 +61,10 @@ end
 ---@param bufnr integer
 ---@return string[]?
 local function get_buf_lines(bufnr)
-  if vim.api.nvim_buf_is_loaded(bufnr) then return vim.api.nvim_buf_get_lines(bufnr, 0, -1, false) end
+  if vim.api.nvim_buf_is_loaded(bufnr) then
+    local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+    return lines
+  end
 
   local filename = vim.api.nvim_buf_get_name(bufnr)
   local f = io.open(filename)
@@ -86,7 +89,10 @@ local function diagnostic_lsp_to_vim(diagnostics, uri, bufnr, client_id)
   local buf_lines = get_buf_lines(bufnr)
   local client = vim.lsp.get_client_by_id(client_id)
   local params = create_textdocument(uri, buf_lines)
-  if params and client then client.notify("textDocument/didOpen", params) end
+  if params and client then
+    client.notify("textDocument/didOpen", params)
+    client.notify("textDocument/didClose", params)
+  end
   local offset_encoding = client and client.offset_encoding or "utf-16"
   --- @param diagnostic lsp.Diagnostic
   --- @return vim.Diagnostic
@@ -148,6 +154,7 @@ M.request_diagnostics = function()
 
         local buf = vim.api.nvim_create_buf(false, false)
         vim.api.nvim_buf_set_name(buf, file_name)
+        -- vim.api.nvim_buf_call(buf, vim.cmd.edit)
         return buf
       end
       for _, per_file_diags in ipairs(result.items) do
@@ -155,7 +162,10 @@ M.request_diagnostics = function()
         if string.find(filename, "%.cs$") and not string.find(filename, "/obj/") and not string.find(filename, "/bin/") then
           if per_file_diags.items ~= nil and #per_file_diags.items > 0 then
             local buf = find_buf_or_make_unlisted(filename)
+
+            vim.lsp.util._refresh("textDocument/diagnostic", { bufnr = buf })
             local diagnostics = diagnostic_lsp_to_vim(per_file_diags.items, per_file_diags.uri, buf, context.client_id)
+            vim.diagnostic.reset()
             vim.diagnostic.set(ns, buf, diagnostics)
           end
         end
