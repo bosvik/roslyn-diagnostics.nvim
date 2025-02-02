@@ -20,3 +20,7 @@ On demand generation of workspace diagnostics for your .NET project.
   }
 }
 ```
+
+## Credits
+
+- [GustavEikaas](https://github.com/GustavEikaas/easy-dotnet.nvim): For one of the most vital plugins for .NET development. Also I stole your spinner module :sunglasses:
