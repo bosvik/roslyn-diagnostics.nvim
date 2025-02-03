@@ -149,6 +149,23 @@ local M = {}
 
 M.setup = function()
   vim.api.nvim_create_user_command("RequestDiagnostics", function() M.request_diagnostics() end, {})
+  vim.api.nvim_create_autocmd({ "LspAttach", "InsertLeave" }, {
+    group = vim.api.nvim_create_augroup("roslyn_diagnostics", { clear = true }),
+    pattern = "*.cs",
+    callback = function()
+      vim.defer_fn(function()
+        local clients = vim.lsp.get_clients({ name = "roslyn" })
+        if not clients or #clients == 0 then return end
+
+        local buffers = vim.lsp.get_buffers_by_client_id(clients[1].id)
+        for _, buf in ipairs(buffers) do
+          vim.diagnostic.reset(nil, buf)
+          vim.lsp.util._refresh("textDocument/diagnostic", { bufnr = buf })
+          vim.lsp.codelens.refresh()
+        end
+      end, 100)
+    end,
+  })
 end
 
 M.request_diagnostics = function()
