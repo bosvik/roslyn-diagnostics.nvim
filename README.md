@@ -11,12 +11,7 @@ On demand generation of workspace diagnostics for your .NET project.
   opts = {},
   ft = { "cs" },
   keys = {
-    {
-      "<leader>cD",
-      "<cmd>RequestDiagnostics<cr>",
-      desc = "Request diagnostics",
-      ft = { "cs" },
-    },
+    { "<leader>cD", "<cmd>RequestDiagnostics<cr>", desc = "Request diagnostics", ft = { "cs" } },
   }
 }
 ```

@@ -129,10 +129,8 @@ local function close_unlisted_buffers()
   end
 end
 
-local function unload_unlisted_buffers()
-  for _, buf in ipairs(vim.api.nvim_list_bufs()) do
-    if not vim.bo[buf].buflisted then vim.api.nvim_buf_delete(buf, { unload = true }) end
-  end
+local function unload_unlisted_buffers(buf)
+  if not vim.bo[buf].buflisted then vim.api.nvim_buf_delete(buf, { unload = true }) end
 end
 
 local function find_buf_or_make_unlisted(filename)
@@ -142,6 +140,7 @@ local function find_buf_or_make_unlisted(filename)
 
   local buf = vim.api.nvim_create_buf(false, false)
   vim.api.nvim_buf_set_name(buf, filename)
+  unload_unlisted_buffers(buf)
   return buf
 end
 
@@ -195,7 +194,6 @@ M.request_diagnostics = function()
           end
         end
       end
-      unload_unlisted_buffers()
       spinner:stop_spinner("Finished populating diagnostics")
     end)
   end
