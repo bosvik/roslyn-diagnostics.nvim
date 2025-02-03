@@ -86,13 +86,14 @@ end
 ---@param client_id integer
 ---@return vim.Diagnostic[]
 local function diagnostic_lsp_to_vim(diagnostics, uri, bufnr, client_id)
-  local buf_lines = get_buf_lines(bufnr)
   local client = vim.lsp.get_client_by_id(client_id)
+  local buf_lines = get_buf_lines(bufnr)
   local params = create_textdocument(uri, buf_lines)
   if params and client then
     client.notify("textDocument/didOpen", params)
     client.notify("textDocument/didClose", params)
   end
+
   local offset_encoding = client and client.offset_encoding or "utf-16"
   --- @param diagnostic lsp.Diagnostic
   --- @return vim.Diagnostic
@@ -127,6 +128,23 @@ local function close_unlisted_buffers()
     if not vim.bo[buf].buflisted then vim.api.nvim_buf_delete(buf, { force = true }) end
   end
 end
+
+local function unload_unlisted_buffers()
+  for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+    if not vim.bo[buf].buflisted then vim.api.nvim_buf_delete(buf, { unload = true }) end
+  end
+end
+
+local function find_buf_or_make_unlisted(filename)
+  for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+    if vim.api.nvim_buf_get_name(buf) == filename then return buf end
+  end
+
+  local buf = vim.api.nvim_create_buf(false, false)
+  vim.api.nvim_buf_set_name(buf, filename)
+  return buf
+end
+
 local M = {}
 
 M.setup = function()
@@ -144,32 +162,23 @@ M.request_diagnostics = function()
   local client = clients[1]
   if client.name == "roslyn" then
     spinner:start_spinner("Populating workspace diagnostics")
+    vim.diagnostic.reset()
     client.request("workspace/diagnostic", { previousResultIds = {} }, function(err, result, context, config)
       local ns = vim.lsp.diagnostic.get_namespace(client.id)
 
-      local function find_buf_or_make_unlisted(file_name)
-        for _, buf in ipairs(vim.api.nvim_list_bufs()) do
-          if vim.api.nvim_buf_get_name(buf) == file_name then return buf end
-        end
-
-        local buf = vim.api.nvim_create_buf(false, false)
-        vim.api.nvim_buf_set_name(buf, file_name)
-        -- vim.api.nvim_buf_call(buf, vim.cmd.edit)
-        return buf
-      end
       for _, per_file_diags in ipairs(result.items) do
         local filename = string.gsub(per_file_diags.uri, "file://", "")
         if string.find(filename, "%.cs$") and not string.find(filename, "/obj/") and not string.find(filename, "/bin/") then
           if per_file_diags.items ~= nil and #per_file_diags.items > 0 then
             local buf = find_buf_or_make_unlisted(filename)
 
-            vim.lsp.util._refresh("textDocument/diagnostic", { bufnr = buf })
             local diagnostics = diagnostic_lsp_to_vim(per_file_diags.items, per_file_diags.uri, buf, context.client_id)
-            vim.diagnostic.reset()
             vim.diagnostic.set(ns, buf, diagnostics)
+            vim.lsp.util._refresh("textDocument/diagnostic", { bufnr = buf })
           end
         end
       end
+      unload_unlisted_buffers()
       spinner:stop_spinner("Finished populating diagnostics")
     end)
   end
