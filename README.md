@@ -8,8 +8,14 @@ On demand generation of workspace diagnostics for your .NET project.
 -- lazy.nvim
 {
   "bosvik/roslyn-diagnostics.nvim",
-  opts = {},
-  ft = { "cs" },
+  ft = { "cs", "fs" },
+  opts = {,
+    -- Optional filter function to filter out files that should not be processed
+    -- This is equivalent to the default filter.
+    filter = function(filename) 
+      return (filename:match("%.cs$") or filename:match("%.fs$")) and not filename:match("/[ob][ij][bn]/")
+    end,
+  },
   keys = {
     { "<leader>cD", "<cmd>RequestDiagnostics<cr>", desc = "Request diagnostics", ft = { "cs" } },
   }
