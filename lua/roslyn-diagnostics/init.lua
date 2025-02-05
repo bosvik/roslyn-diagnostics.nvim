@@ -23,6 +23,20 @@ local M = {}
 M.options = {
   -- optional filter function to filter out files that should not be processed
   filter = function(filename) return (filename:match("%.cs$") or filename:match("%.fs$")) and not filename:match("/[ob][ij][bn]/") end,
+  diagnostic_opts = {
+    virtual_text = {
+      prefix = "●",
+    },
+    severity_sort = true,
+    signs = {
+      text = {
+        [vim.diagnostic.severity.ERROR] = "",
+        [vim.diagnostic.severity.WARN] = "",
+        [vim.diagnostic.severity.INFO] = "",
+        [vim.diagnostic.severity.HINT] = "",
+      },
+    },
+  },
 }
 
 M.setup = function(options)
@@ -63,7 +77,7 @@ M.request_diagnostics = function(severity)
   local spinner = require("roslyn-diagnostics.spinner").new()
   local clients = vim.lsp.get_clients({ name = "roslyn" })
   if not clients or #clients == 0 then
-    vim.notify("Roslyn has not attached to the buffer yet. Try again.")
+    vim.notify("Roslyn has not attached to the buffer yet.", vim.log.levels.ERROR)
     return
   end
   local client = clients[1]
