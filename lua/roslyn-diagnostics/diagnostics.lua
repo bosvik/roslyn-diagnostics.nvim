@@ -86,8 +86,9 @@ end
 ---@param diagnostics lsp.Diagnostic[]
 ---@param bufnr integer
 ---@param client_id integer
+---@param severity_level integer
 ---@return vim.Diagnostic[]
-M.diagnostic_lsp_to_vim = function(diagnostics, uri, bufnr, client_id)
+M.diagnostic_lsp_to_vim = function(diagnostics, uri, bufnr, client_id, severity_level)
   local client = vim.lsp.get_client_by_id(client_id)
   local buf_lines = get_buf_lines(bufnr)
   local params = create_textdocument(uri, buf_lines)
@@ -103,25 +104,28 @@ M.diagnostic_lsp_to_vim = function(diagnostics, uri, bufnr, client_id)
     local start = diagnostic.range.start
     local _end = diagnostic.range["end"]
     local message = diagnostic.message
+    local severity = severity_lsp_to_vim(diagnostic.severity)
     if type(message) ~= "string" then
       vim.notify_once(string.format("Unsupported Markup message from LSP client %d", client_id), 4)
       message = diagnostic.message.value
     end
-    --- @type vim.Diagnostic
-    return {
-      lnum = start.line,
-      col = line_byte_from_position(buf_lines, start.line, start.character, offset_encoding),
-      end_lnum = _end.line,
-      end_col = line_byte_from_position(buf_lines, _end.line, _end.character, offset_encoding),
-      severity = severity_lsp_to_vim(diagnostic.severity),
-      message = message,
-      source = diagnostic.source,
-      code = diagnostic.code,
-      _tags = tags_lsp_to_vim(diagnostic, client_id),
-      user_data = {
-        lsp = diagnostic,
-      },
-    }
+    if severity <= severity_level then
+      --- @type vim.Diagnostic
+      return {
+        lnum = start.line,
+        col = line_byte_from_position(buf_lines, start.line, start.character, offset_encoding),
+        end_lnum = _end.line,
+        end_col = line_byte_from_position(buf_lines, _end.line, _end.character, offset_encoding),
+        severity = severity_lsp_to_vim(diagnostic.severity),
+        message = message,
+        source = diagnostic.source,
+        code = diagnostic.code,
+        _tags = tags_lsp_to_vim(diagnostic, client_id),
+        user_data = {
+          lsp = diagnostic,
+        },
+      }
+    end
   end, diagnostics)
 end
 

@@ -31,6 +31,7 @@ M.setup = function(options)
   M.options = vim.tbl_deep_extend("keep", options, M.options)
 
   vim.api.nvim_create_user_command("RequestDiagnostics", function() M.request_diagnostics() end, {})
+  vim.api.nvim_create_user_command("RequestDiagnosticErrors", function() M.request_diagnostics(1) end, {})
   vim.api.nvim_create_autocmd({ "LspAttach", "InsertLeave" }, {
     group = vim.api.nvim_create_augroup("roslyn_diagnostics", { clear = true }),
     pattern = "*.cs",
@@ -52,7 +53,12 @@ M.setup = function(options)
   return M.options
 end
 
-M.request_diagnostics = function()
+---@param severity integer | nil
+M.request_diagnostics = function(severity)
+  vim.diagnostic.config(M.options.diagnostic_opts)
+  local severity_level = 4
+  if severity ~= nil then severity_level = severity end
+
   close_unlisted_buffers()
   local spinner = require("roslyn-diagnostics.spinner").new()
   local clients = vim.lsp.get_clients({ name = "roslyn" })
@@ -73,7 +79,7 @@ M.request_diagnostics = function()
           if per_file_diags.items ~= nil and #per_file_diags.items > 0 then
             local buf = find_buf_or_make_unlisted(filename)
 
-            local file_diagnostics = require("roslyn-diagnostics.diagnostics").diagnostic_lsp_to_vim(per_file_diags.items, per_file_diags.uri, buf, context.client_id)
+            local file_diagnostics = require("roslyn-diagnostics.diagnostics").diagnostic_lsp_to_vim(per_file_diags.items, per_file_diags.uri, buf, context.client_id, severity_level)
             vim.diagnostic.set(ns, buf, file_diagnostics)
             vim.lsp.util._refresh("textDocument/diagnostic", { bufnr = buf })
           end
