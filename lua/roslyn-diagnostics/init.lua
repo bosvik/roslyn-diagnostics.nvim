@@ -1,3 +1,5 @@
+local log = require("vim.lsp.log")
+
 local function close_unlisted_buffers()
   for _, buf in ipairs(vim.api.nvim_list_bufs()) do
     if not vim.bo[buf].buflisted then vim.api.nvim_buf_delete(buf, { force = true }) end
@@ -84,6 +86,10 @@ M.request_diagnostics = function(severity)
     spinner:start_spinner("Populating workspace diagnostics")
     vim.diagnostic.reset()
     client.request("workspace/diagnostic", { previousResultIds = {} }, function(err, result, context, config)
+      if err then
+        local err_msg = string.format("diagnostics error - %s", vim.inspect(err))
+        log.error(err_msg)
+      end
       local ns = vim.lsp.diagnostic.get_namespace(client.id)
 
       for _, per_file_diags in ipairs(result.items) do
