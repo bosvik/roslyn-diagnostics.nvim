@@ -15,7 +15,6 @@ local function find_buf_or_make_unlisted(filename)
 
   local buf = vim.api.nvim_create_buf(false, false)
   vim.api.nvim_buf_set_name(buf, filename)
-  unload_unlisted_buffers(buf)
   return buf
 end
 
@@ -96,6 +95,7 @@ M.request_diagnostics = function(severity)
             local file_diagnostics = require("roslyn-diagnostics.diagnostics").diagnostic_lsp_to_vim(per_file_diags.items, per_file_diags.uri, buf, context.client_id, severity_level)
             vim.diagnostic.set(ns, buf, file_diagnostics)
             vim.lsp.util._refresh("textDocument/diagnostic", { bufnr = buf })
+            unload_unlisted_buffers(buf)
           end
         end
       end
