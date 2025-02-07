@@ -25,6 +25,16 @@ local function severity_lsp_to_vim(severity)
   return severity
 end
 
+local function get_filetype(uri)
+  local filename = string.gsub(uri, "file://", "")
+  if filename:match("%.cs$") then
+    return "csharp"
+  elseif filename:match("%.fs$") then
+    return "fsharp"
+  end
+  return nil
+end
+
 ---@param uri unknown
 ---@param buf_lines string[]?
 ---@return lsp.DidOpenTextDocumentParams?
@@ -35,7 +45,7 @@ local function create_textdocument(uri, buf_lines)
       uri = uri,
       version = 0,
       text = vim.fn.join(buf_lines, "\n"),
-      languageId = "csharp",
+      languageId = get_filetype(uri),
     },
   }
   return params
