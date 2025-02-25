@@ -24,27 +24,14 @@ local M = {}
 M.options = {
   -- optional filter function to filter out files that should not be processed
   filter = function(filename) return (filename:match("%.cs$") or filename:match("%.fs$")) and not filename:match("/[ob][ij][bn]/") end,
-  diagnostic_opts = {
-    virtual_text = {
-      prefix = "●",
-    },
-    severity_sort = true,
-    signs = {
-      text = {
-        [vim.diagnostic.severity.ERROR] = "",
-        [vim.diagnostic.severity.WARN] = "",
-        [vim.diagnostic.severity.INFO] = "",
-        [vim.diagnostic.severity.HINT] = "",
-      },
-    },
-  },
+  diagnostic_opts = false,
 }
 
 M.setup = function(options)
   options = options or {}
 
   M.options = vim.tbl_deep_extend("keep", options, M.options)
-
+  if type(M.options.diagnostic_opts) == "table" or (type(M.options.diagnostic_opts) == "boolean" and M.options.diagnostic_opts == true) then vim.diagnostic.config(M.options.diagnostic_opts) end
   vim.api.nvim_create_user_command("RequestDiagnostics", function() M.request_diagnostics() end, {})
   vim.api.nvim_create_user_command("RequestDiagnosticErrors", function() M.request_diagnostics(1) end, {})
   vim.api.nvim_create_autocmd({ "LspAttach", "InsertLeave" }, {
@@ -70,7 +57,6 @@ end
 
 ---@param severity integer | nil
 M.request_diagnostics = function(severity)
-  vim.diagnostic.config(M.options.diagnostic_opts)
   local severity_level = 4
   if severity ~= nil then severity_level = severity end
 
