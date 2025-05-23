@@ -75,8 +75,14 @@ M.request_diagnostics = function(severity)
       if err then
         local err_msg = string.format("diagnostics error - %s", vim.inspect(err))
         log.error(err_msg)
+        spinner:stop_spinner("Error fetching diagnostics")
       end
       local ns = vim.lsp.diagnostic.get_namespace(client.id)
+
+      if not result or not result.items then
+        spinner:stop_spinner("No diagnostic results received")
+        return
+      end
 
       for _, per_file_diags in ipairs(result.items) do
         local filename = string.gsub(per_file_diags.uri, "file://", "")

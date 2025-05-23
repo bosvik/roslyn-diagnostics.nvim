@@ -110,34 +110,47 @@ M.diagnostic_lsp_to_vim = function(diagnostics, uri, bufnr, client_id, severity_
   local offset_encoding = client and client.offset_encoding or "utf-16"
   --- @param diagnostic lsp.Diagnostic
   --- @return vim.Diagnostic
-  return vim.tbl_map(function(diagnostic)
-    local start = diagnostic.range.start
-    local _end = diagnostic.range["end"]
-    local message = diagnostic.message
-    local severity = severity_lsp_to_vim(diagnostic.severity)
-    if type(message) ~= "string" then
-      vim.notify_once(string.format("Unsupported Markup message from LSP client %d", client_id), 4)
-      message = diagnostic.message.value
-    end
+  return vim.tbl_filter(
+    function(item) return item ~= nil end,
+    vim.tbl_map(function(diagnostic)
+      local start = diagnostic.range.start
+      local _end = diagnostic.range["end"]
+      local message = diagnostic.message
+      local severity = severity_lsp_to_vim(diagnostic.severity)
+      if type(message) ~= "string" then
+        vim.notify_once(string.format("Unsupported Markup message from LSP client %d", client_id), 4)
+        message = diagnostic.message.value
+      end
+      -- return vim.tbl_map(function(diagnostic)
+      --   local start = diagnostic.range.start
+      --   local _end = diagnostic.range["end"]
+      --   local message = diagnostic.message
+      --   local severity = severity_lsp_to_vim(diagnostic.severity)
+      --   if type(message) ~= "string" then
+      --     vim.notify_once(string.format("Unsupported Markup message from LSP client %d", client_id), 4)
+      --     message = diagnostic.message.value
+      --   end
 
-    if severity <= severity_level then
-      --- @type vim.Diagnostic
-      return {
-        lnum = start.line,
-        col = line_byte_from_position(buf_lines, start.line, start.character, offset_encoding),
-        end_lnum = _end.line,
-        end_col = line_byte_from_position(buf_lines, _end.line, _end.character, offset_encoding),
-        severity = severity,
-        message = message,
-        source = diagnostic.source,
-        code = diagnostic.code,
-        _tags = tags_lsp_to_vim(diagnostic, client_id),
-        user_data = {
-          lsp = diagnostic,
-        },
-      }
-    end
-  end, diagnostics)
+      if severity <= severity_level then
+        --- @type vim.Diagnostic
+        return {
+          lnum = start.line,
+          col = line_byte_from_position(buf_lines, start.line, start.character, offset_encoding),
+          end_lnum = _end.line,
+          end_col = line_byte_from_position(buf_lines, _end.line, _end.character, offset_encoding),
+          severity = severity,
+          message = message,
+          source = diagnostic.source,
+          code = diagnostic.code,
+          _tags = tags_lsp_to_vim(diagnostic, client_id),
+          user_data = {
+            lsp = diagnostic,
+          },
+        }
+      end
+      return nil
+    end, diagnostics)
+  )
 end
 
 return M
