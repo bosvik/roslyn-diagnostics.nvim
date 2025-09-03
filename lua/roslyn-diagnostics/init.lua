@@ -6,24 +6,16 @@ local function close_unlisted_buffers()
   end
 end
 
-local function unload_unlisted_buffers(buf)
-  if not vim.bo[buf].buflisted then vim.api.nvim_buf_delete(buf, { unload = true }) end
-end
-
 local function get_or_create_buffer(filename)
-  -- Check if buffer already exists
   for _, buf in ipairs(vim.api.nvim_list_bufs()) do
     if vim.api.nvim_buf_get_name(buf) == filename then return buf end
   end
-  
-  -- Use bufadd to create a buffer entry without loading the file
-  -- This doesn't create conflicts like nvim_create_buf + nvim_buf_set_name
+
   return vim.fn.bufadd(filename)
 end
 
 local M = {}
 M.options = {
-  -- optional filter function to filter out files that should not be processed
   filter = function(filename) return (filename:match("%.cs$") or filename:match("%.fs$")) and not filename:match("/[ob][ij][bn]/") end,
   diagnostic_opts = false,
 }
@@ -72,7 +64,7 @@ M.request_diagnostics = function(severity)
   if client.name == "roslyn" then
     spinner:start_spinner("Populating workspace diagnostics")
     vim.diagnostic.reset()
-    client.request("workspace/diagnostic", { previousResultIds = {} }, function(err, result, context, config)
+    client:request("workspace/diagnostic", { previousResultIds = {} }, function(err, result, context)
       if err then
         local err_msg = string.format("diagnostics error - %s", vim.inspect(err))
         log.error(err_msg)

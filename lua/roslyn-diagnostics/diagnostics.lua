@@ -91,15 +91,6 @@ M.diagnostic_lsp_to_vim = function(diagnostics, bufnr, client_id, severity_level
         vim.notify_once(string.format("Unsupported Markup message from LSP client %d", client_id), 4)
         message = diagnostic.message.value
       end
-      -- return vim.tbl_map(function(diagnostic)
-      --   local start = diagnostic.range.start
-      --   local _end = diagnostic.range["end"]
-      --   local message = diagnostic.message
-      --   local severity = severity_lsp_to_vim(diagnostic.severity)
-      --   if type(message) ~= "string" then
-      --     vim.notify_once(string.format("Unsupported Markup message from LSP client %d", client_id), 4)
-      --     message = diagnostic.message.value
-      --   end
 
       if severity <= severity_level then
         --- @type vim.Diagnostic
