@@ -25,31 +25,6 @@ local function severity_lsp_to_vim(severity)
   return severity
 end
 
-local function get_filetype(uri)
-  local filename = string.gsub(uri, "file://", "")
-  if filename:match("%.cs$") then
-    return "csharp"
-  elseif filename:match("%.fs$") then
-    return "fsharp"
-  end
-  return nil
-end
-
----@param uri unknown
----@param buf_lines string[]?
----@return lsp.DidOpenTextDocumentParams?
-local function create_textdocument(uri, buf_lines)
-  if not buf_lines then return end
-  local params = {
-    textDocument = {
-      uri = uri,
-      version = 0,
-      text = vim.fn.join(buf_lines, "\n"),
-      languageId = get_filetype(uri),
-    },
-  }
-  return params
-end
 
 --- @param diagnostic lsp.Diagnostic
 --- @param client_id integer
@@ -98,14 +73,9 @@ end
 ---@param client_id integer
 ---@param severity_level integer
 ---@return vim.Diagnostic[]
-M.diagnostic_lsp_to_vim = function(diagnostics, uri, bufnr, client_id, severity_level)
+M.diagnostic_lsp_to_vim = function(diagnostics, bufnr, client_id, severity_level)
   local client = vim.lsp.get_client_by_id(client_id)
   local buf_lines = get_buf_lines(bufnr)
-  local params = create_textdocument(uri, buf_lines)
-  if params and client then
-    client.notify("textDocument/didOpen", params)
-    client.notify("textDocument/didClose", params)
-  end
 
   local offset_encoding = client and client.offset_encoding or "utf-16"
   --- @param diagnostic lsp.Diagnostic

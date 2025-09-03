@@ -10,14 +10,15 @@ local function unload_unlisted_buffers(buf)
   if not vim.bo[buf].buflisted then vim.api.nvim_buf_delete(buf, { unload = true }) end
 end
 
-local function find_buf_or_make_unlisted(filename)
+local function get_or_create_buffer(filename)
+  -- Check if buffer already exists
   for _, buf in ipairs(vim.api.nvim_list_bufs()) do
     if vim.api.nvim_buf_get_name(buf) == filename then return buf end
   end
-
-  local buf = vim.api.nvim_create_buf(false, false)
-  vim.api.nvim_buf_set_name(buf, filename)
-  return buf
+  
+  -- Use bufadd to create a buffer entry without loading the file
+  -- This doesn't create conflicts like nvim_create_buf + nvim_buf_set_name
+  return vim.fn.bufadd(filename)
 end
 
 local M = {}
@@ -88,12 +89,11 @@ M.request_diagnostics = function(severity)
         local filename = string.gsub(per_file_diags.uri, "file://", "")
         if M.options.filter(filename) then
           if per_file_diags.items ~= nil and #per_file_diags.items > 0 then
-            local buf = find_buf_or_make_unlisted(filename)
+            local buf = get_or_create_buffer(filename)
 
-            local file_diagnostics = require("roslyn-diagnostics.diagnostics").diagnostic_lsp_to_vim(per_file_diags.items, per_file_diags.uri, buf, context.client_id, severity_level)
+            local file_diagnostics = require("roslyn-diagnostics.diagnostics").diagnostic_lsp_to_vim(per_file_diags.items, buf, context.client_id, severity_level)
             vim.diagnostic.set(ns, buf, file_diagnostics)
             vim.lsp.util._refresh("textDocument/diagnostic", { bufnr = buf })
-            unload_unlisted_buffers(buf)
           end
         end
       end
