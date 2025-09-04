@@ -16,7 +16,7 @@ end
 
 local M = {}
 M.options = {
-  filter = function(filename) return (filename:match("%.cs$") or filename:match("%.fs$")) and not filename:match("/[ob][ij][bn]/") end,
+  filter = function(filename) return (filename:match("%.cs$") or filename:match("%.fs$")) and not filename:match("/obj/") and not filename:match("/bin/") end,
   diagnostic_opts = false,
 }
 
