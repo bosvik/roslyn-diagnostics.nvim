@@ -38,7 +38,11 @@ M.setup = function(options)
         local buffers = vim.lsp.get_buffers_by_client_id(clients[1].id)
         for _, buf in ipairs(buffers) do
           vim.diagnostic.reset(nil, buf)
-          vim.lsp.util._refresh("textDocument/diagnostic", { bufnr = buf })
+          if vim.fn.has("nvim-0.12") == 0 then
+            vim.lsp.diagnostic._refresh(buf)
+          else
+            vim.lsp.util._refresh("textDocument/diagnostic", { bufnr = buf })
+          end
           vim.lsp.codelens.refresh()
         end
       end, 100)
